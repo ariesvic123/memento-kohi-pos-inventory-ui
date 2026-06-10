@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(node -e ' *)",
+      "Bash(powershell -Command ' *)",
+      "Bash(npm run *)",
+      "Bash(xargs grep -l \"SaleRow\\\\|Revenue\\\\|NetProfit\")"
+    ]
+  }
+}

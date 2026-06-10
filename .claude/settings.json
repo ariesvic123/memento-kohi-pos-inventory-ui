@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\({...p.dependencies,...p.devDependencies},null,2\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('html2canvas'\\);console.log\\('html2canvas OK:', require\\('./node_modules/html2canvas/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/react-router-dom/package.json'\\).version\\)\")"
+    ]
+  }
+}

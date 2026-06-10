@@ -1,0 +1,98 @@
+// Upload screen styles
+// Matches the boilerplate SCSS convention (BEM-like, no nesting beyond 2 levels)
+
+.upload__wrapper {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f1eb;
+}
+
+.upload__card {
+  background: #ffffff;
+  padding: 60px;
+  border-radius: 30px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(92, 58, 33, 0.1);
+  max-width: 480px;
+  width: 90%;
+}
+
+.upload__title {
+  color: #2d1b18;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin: 0 0 8px;
+}
+
+.upload__logo {
+  width: 180px;
+  height: auto;
+  margin: 0 auto 8px;
+  display: block;
+}
+
+.upload__subtitle {
+  color: #8b6f60;
+  font-size: 0.95rem;
+  margin: 0 0 32px;
+}
+
+.upload__dropzone {
+  border: 2px dashed rgba(92, 58, 33, 0.25);
+  border-radius: 16px;
+  padding: 28px 20px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+
+  &:hover {
+    border-color: #5c3a21;
+    background: #fdf9f4;
+  }
+}
+
+.upload__dropzone-icon {
+  font-size: 2rem;
+}
+
+.upload__dropzone-label {
+  font-size: 0.9rem;
+  color: #7b5e57;
+  word-break: break-all;
+}
+
+.upload__error {
+  color: #c0392b;
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+.upload__btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: #c8c8c8;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: not-allowed;
+  transition: background 0.2s ease;
+
+  &--ready {
+    background: #2d1b18;
+    cursor: pointer;
+
+    &:hover {
+      background: #5c3a21;
+    }
+  }
+}
