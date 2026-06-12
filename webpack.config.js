@@ -27,6 +27,12 @@ module.exports = [
     },
     mode: 'development', // mode for building the code; other option is 'production' for deployment
     target: 'web',  // tells it to run on web browser; other option is 'node' to handle node application on server side
+    devServer: {
+      host: process.env.HOST || 'localhost',
+      port: process.env.PORT || 8080,
+      server: 'https',
+      historyApiFallback: true,
+    },
     output: {
       // - How to handle the files
       // - where to output the bundled file

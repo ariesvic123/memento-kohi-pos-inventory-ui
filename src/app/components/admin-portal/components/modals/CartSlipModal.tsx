@@ -32,6 +32,7 @@ const CartSlipModal: React.FC<Props> = ({ cart, onClose }) => {
       canvas.toBlob(async (blob) => {
         if (!blob) { setCopying(false); return }
         try {
+          if (!navigator.clipboard || !window.isSecureContext) throw new Error('insecure')
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
           setDone(true)
           setTimeout(() => setDone(false), 2500)

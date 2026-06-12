@@ -63,6 +63,7 @@ const ReceiptModal: React.FC = () => {
       canvas.toBlob(async (blob) => {
         if (!blob) { setCopying(false); return }
         try {
+          if (!navigator.clipboard || !window.isSecureContext) throw new Error('insecure')
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
           setCopyDone(true)
           setTimeout(() => setCopyDone(false), 2500)
