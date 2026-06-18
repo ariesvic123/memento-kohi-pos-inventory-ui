@@ -5,7 +5,11 @@
       "Bash(node -e ' *)",
       "Bash(powershell -Command ' *)",
       "Bash(npm run *)",
-      "Bash(xargs grep -l \"SaleRow\\\\|Revenue\\\\|NetProfit\")"
+      "Bash(xargs grep -l \"SaleRow\\\\|Revenue\\\\|NetProfit\")",
+      "Bash(mkdir -p \"e:/CODING/memento-kohi-pos-inventory-ui/.claude/commands\")"
+    ],
+    "additionalDirectories": [
+      "e:\\CODING\\memento-kohi-pos-inventory-ui\\.claude"
     ]
   }
 }
