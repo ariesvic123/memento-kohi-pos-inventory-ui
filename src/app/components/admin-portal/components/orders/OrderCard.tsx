@@ -113,7 +113,9 @@ const OrderCard: React.FC<Props> = ({ order, index, onDone, onDelete, onUpdate }
               <li className='sticky-card__item'>
                 <span className='sticky-card__item-left'>
                   <b className='sticky-card__qty'>{item.qty}×</b>
-                  <span className='sticky-card__size'>{item.size}</span>
+                  {item.size !== 'bundle' && (
+                    <span className='sticky-card__size'>{item.size}</span>
+                  )}
                   <span className='sticky-card__name'>{item.name}</span>
                 </span>
                 <span className='sticky-card__item-right'>

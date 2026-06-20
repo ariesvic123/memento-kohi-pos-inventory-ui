@@ -11,6 +11,7 @@ import {
   DrinkSize,
   FoodCostingRow,
   InventoryItem,
+  PendingOrder,
   RawIngredientPricingRow,
   RestockEntry,
   SaleRow,
@@ -111,13 +112,18 @@ export const resolveVolColumn = (size: DrinkSize, temperature?: 'hot' | 'iced'):
     '12oz': '12oz (volume)',
     '16oz': '16oz (volume)',
     'unit': '',
-    '60g':  'MASTER DOUGH (volume)',
-    '70g':  'MASTER DOUGH (volume)',
+    '75g':  'MASTER DOUGH (volume)',
   }
   return map[size] ?? ''
 }
 
 // ─── Inventory deduction ──────────────────────────────────────────────────────
+
+// ─── Bundle pricing ───────────────────────────────────────────────────────────
+// bundleCookiePrices: array of 3 individual cookie prices
+// Returns the bundle price: sum − 15, but never below 200
+export const computeBundlePrice = (cookiePrices: number[]): number =>
+  Math.max(cookiePrices.reduce((a, b) => a + b, 0) - 15, 200)
 
 export const computeInventoryAfterDeduction = (
   baseInventory:        InventoryItem[],
@@ -129,12 +135,19 @@ export const computeInventoryAfterDeduction = (
 ): InventoryItem[] => {
   const tempInv: InventoryItem[] = JSON.parse(JSON.stringify(baseInventory))
 
-  cartItems.forEach((item) => {
-    const isCookieItem = item.size === '60g' || item.size === '70g'
+  // Expand bundle items into their constituent cookies before deducting
+  const effectiveCart: CartItem[] = cartItems.flatMap(item =>
+    (item.isBundle && item.bundleItems?.length)
+      ? item.bundleItems.map(bi => ({ ...bi, qty: bi.qty * item.qty }))
+      : [item]
+  )
+
+  effectiveCart.forEach((item) => {
+    const isCookieItem = item.size === '75g'
 
     // ── Cookie deduction path ────────────────────────────────────────────────
     if (isCookieItem) {
-      const sizeQtyKey  = item.size === '60g' ? '60g QTY' : '70g QTY'
+      const sizeQtyKey  = '75g QTY'
       const doughRow    = foodCosting.find(
         (f) => String(f.Food ?? '').trim().toLowerCase() === item.name.trim().toLowerCase()
       )
@@ -393,12 +406,19 @@ export const computeVoidDeltas = (
     deltas[key] = (deltas[key] ?? 0) + amount
   }
 
-  cartItems.forEach((item) => {
-    const isCookieItem = item.size === '60g' || item.size === '70g'
+  // Expand bundle items into constituent cookies before computing deltas
+  const effectiveCart: CartItem[] = cartItems.flatMap(item =>
+    (item.isBundle && item.bundleItems?.length)
+      ? item.bundleItems.map(bi => ({ ...bi, qty: bi.qty * item.qty }))
+      : [item]
+  )
+
+  effectiveCart.forEach((item) => {
+    const isCookieItem = item.size === '75g'
 
     // ── Cookie path ──────────────────────────────────────────────────────────
     if (isCookieItem) {
-      const sizeQtyKey = item.size === '60g' ? '60g QTY' : '70g QTY'
+      const sizeQtyKey = '75g QTY'
       const doughRow   = foodCosting.find(
         (f) => String(f.Food ?? '').trim().toLowerCase() === item.name.trim().toLowerCase()
       )
@@ -543,13 +563,19 @@ export const computeTakeoutBagCounts = (
 ): { doubleBags: number; singleBags: number } => {
   const drinkSizes: DrinkSize[] = ['8oz', '12oz', '16oz', 'unit']
   const drinkQty = cart
-    .filter((item) => drinkSizes.includes(item.size))
+    .filter((item) => drinkSizes.includes(item.size) && !item.isBundle)
     .reduce((sum, item) => sum + item.qty, 0)
-  const hasFood = cart.some((item) => item.size === '60g' || item.size === '70g')
+  const hasFood = cart.some((item) => item.size === '75g')
+
+  // Bundle cookies: 1 single bag per 3 bundles (rounded up)
+  const bundleCount = cart
+    .filter((item) => item.isBundle)
+    .reduce((sum, item) => sum + item.qty, 0)
+  const bundleBags = bundleCount > 0 ? Math.ceil(bundleCount / 3) : 0
 
   return {
     doubleBags: Math.floor(drinkQty / 2),
-    singleBags: (drinkQty % 2) + (hasFood ? 1 : 0),
+    singleBags: (drinkQty % 2) + (hasFood ? 1 : 0) + bundleBags,
   }
 }
 
@@ -586,6 +612,7 @@ export interface ParsedWorkbook {
   dailySales:            SaleRow[]
   restockRows:           RestockEntry[]
   formulaMap:            FormulaMap
+  preOrders:             PendingOrder[]
   wb:                    XLSX.WorkBook
 }
 
@@ -627,6 +654,10 @@ const parseSheet = <T>(wb: XLSX.WorkBook, sheetName: string): T[] => {
 //  15 16oz (volume) | 16 16oz QTY CUPS | 17 16oz PRICE
 //  18 MASTER DOUGH (volume) | 19 MASTER DOUGH (production) | 20 MASTER DOUGH (price)
 const INGR_PRICE_COL_NAMES: Record<number, string> = {
+  1:  'CATEGORY',
+  2:  'DRINK TYPE',
+  3:  'VOLUME',
+  4:  'UNIT',
   5:  'PRICE',
   8:  '8oz ICED / cup',
   9:  '8oz HOT / cup',
@@ -661,7 +692,7 @@ const hasAnyPrice = (row: Record<string, unknown>): boolean => {
   const priceCols = [
     'Actual Price (8oz)', 'Actual Price (12oz)', 'Actual Price (16oz)',
     'Actual Price (Slice)', 'Actual Price (Shots)', 'Actual Price (Latte Art)',
-    'Actual Price (60g)', 'Actual Price (70g)', 'Actual Price',
+    'Actual Price (75g)', 'Actual Price',
   ]
   return priceCols.some((col) => parseNum(row[col]) > 0)
 }
@@ -858,7 +889,7 @@ export const parseFormulaMap = (wb: XLSX.WorkBook): FormulaMap => {
     if (fcHIdx !== -1) {
       const headers    = fcRaw[fcHIdx] as string[]
       const nameColIdx = headers.findIndex((h) => String(h).trim() === 'Food')
-      const FOOD_COST_KEYS = ['Master Dough (pricing)', '60g cookie', '70g cookie', 'Fruit Cream']
+      const FOOD_COST_KEYS = ['Master Dough (pricing)', '75g cookie', 'Fruit Cream']
       const costCols: { key: string; colIdx: number }[] = []
       headers.forEach((h, i) => {
         const k = String(h).trim()
@@ -1075,10 +1106,8 @@ export const parseWorkbook = (wb: XLSX.WorkBook): ParsedWorkbook => {
         'Actual Price (8oz)':     'N/A',
         'Actual Price (12oz)':    'N/A',
         'Actual Price (16oz)':    'N/A',
-        'Actual Price (60g)':     row['60g cookie'],
-        'Actual Price (70g)':     row['70g cookie'],
-        'Cost (60g)':             foodCostRow?.['60g cookie'] ?? 'N/A',
-        'Cost (70g)':             foodCostRow?.['70g cookie'] ?? 'N/A',
+        'Actual Price (75g)':     row['75g cookie'],
+        'Cost (75g)':             foodCostRow?.['75g cookie'] ?? 'N/A',
       }
       return normalized
     })
@@ -1108,6 +1137,33 @@ export const parseWorkbook = (wb: XLSX.WorkBook): ParsedWorkbook => {
     ? recomputeDrinkCostsFromFormulaMap(drinkCosting, syncedPricing, formulaMap)
     : recomputeDrinkCostsFromIngredientChange(drinkCosting, pricingData, syncedPricing)
 
+  // ── Bundle pre-orders ─────────────────────────────────────────────────────
+  const preOrdersWs = wb.Sheets['Bundle_PreOrders']
+  const preOrders: PendingOrder[] = preOrdersWs
+    ? XLSX.utils.sheet_to_json<Record<string, unknown>>(preOrdersWs, { defval: '' })
+        .filter((r) => String(r['ID'] ?? '').trim() !== '')
+        .map((r): PendingOrder => {
+          const notesStr = String(r['Notes'] ?? '').trim()
+          const cashRcv  = r['CashReceived'] ? Number(r['CashReceived']) : 0
+          const order: PendingOrder = {
+            id:        String(r['ID']        ?? ''),
+            orderNo:   Number(r['OrderNo']   ?? 0),
+            customer:  String(r['Customer']  ?? ''),
+            address:   String(r['Address']   ?? ''),
+            method:    String(r['Method'] ?? '').toUpperCase() === 'GCASH' ? 'GCASH' : 'CASH',
+            isTakeout: String(r['IsTakeout'] ?? '') === 'YES',
+            date:      String(r['Date']      ?? ''),
+            createdAt: String(r['CreatedAt'] ?? ''),
+            total:     Number(r['Total']     ?? 0),
+            items:     (() => { try { return JSON.parse(String(r['Items'] ?? '[]')) } catch { return [] } })(),
+            isPreOrder: true,
+          }
+          if (notesStr) order.notes = notesStr
+          if (cashRcv > 0) order.cashReceived = cashRcv
+          return order
+        })
+    : []
+
   return {
     inventory,
     rawIngredientsPricing: syncedPricing,
@@ -1117,6 +1173,7 @@ export const parseWorkbook = (wb: XLSX.WorkBook): ParsedWorkbook => {
     dailySales,
     restockRows,
     formulaMap,
+    preOrders,
     wb,
   }
 }
@@ -1833,7 +1890,8 @@ export const exportPOSData = (
   originalRestocks:      RestockEntry[]            = [],
   newRestocks:           RestockEntry[]            = [],
   rawIngredientsPricing: RawIngredientPricingRow[] = [],
-  sellingPrices:         SellingPriceRow[]         = []
+  sellingPrices:         SellingPriceRow[]         = [],
+  preOrders:             PendingOrder[]            = []
 ): void => {
   // Deep-clone at JS object level — avoids a lossy binary write→read round-trip
   // that strips cell style data in the community SheetJS build.
@@ -1970,7 +2028,7 @@ export const exportPOSData = (
      'Actual Price (Shots)', 'Actual Price (Latte Art)', 'Actual Price (Slice)'])
   updateSellingPriceColumns(workbook, 'Cookie Selling Price',
     sellingPrices.filter((r) => r.Category === 'Food'),
-    ['Actual Price (60g)', 'Actual Price (70g)', 'Cost (60g)', 'Cost (70g)'])
+    ['Actual Price (75g)', 'Cost (75g)'])
 
   const historySheetName = 'POS_Transaction_History'
   const historyData = dailySales.map((row) => ({
@@ -2008,6 +2066,28 @@ export const exportPOSData = (
   workbook.Sheets[historySheetName] = historyWs
   if (!workbook.SheetNames.includes(historySheetName)) {
     workbook.SheetNames.push(historySheetName)
+  }
+
+  // Write bundle pre-orders to dedicated sheet so they survive re-import
+  const preOrderSheetName = 'Bundle_PreOrders'
+  const preOrderData = preOrders.map((o) => ({
+    ID:          o.id,
+    OrderNo:     o.orderNo,
+    Customer:    o.customer,
+    Address:     o.address,
+    Method:      o.method,
+    IsTakeout:   o.isTakeout ? 'YES' : 'NO',
+    Notes:       o.notes ?? '',
+    Date:        o.date,
+    CreatedAt:   o.createdAt,
+    Total:       o.total,
+    CashReceived: o.cashReceived ?? '',
+    Items:       JSON.stringify(o.items),
+  }))
+  const preOrderWs = XLSX.utils.json_to_sheet(preOrderData)
+  workbook.Sheets[preOrderSheetName] = preOrderWs
+  if (!workbook.SheetNames.includes(preOrderSheetName)) {
+    workbook.SheetNames.push(preOrderSheetName)
   }
 
   const now      = new Date()

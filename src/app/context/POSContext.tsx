@@ -50,6 +50,7 @@ import {
   recomputePerCupPricesFromVolumes,
 } from '../config/utils/pos.helpers'
 
+
 // ─── Shape ───────────────────────────────────────────────────────────────────
 
 interface POSContextValue {
@@ -127,8 +128,13 @@ interface POSContextValue {
   deletePendingOrder:   (id: string) => void
   updatePendingOrder:   (id: string, patch: Partial<Pick<PendingOrder, 'method' | 'notes' | 'cashReceived'>>) => void
 
+  // bundle pre-orders (advance orders, saved to Excel)
+  addPreOrder:      (order: Omit<PendingOrder, 'id' | 'orderNo' | 'date' | 'createdAt' | 'isPreOrder'>) => void
+  completePreOrder: (id: string) => void
+  deletePreOrder:   (id: string) => void
+
   // void / refund (reverses inventory deduction + removes from daily sales)
-  voidOrder: (orderNo: number) => void
+  voidOrder: (orderNo: number | undefined, customer: string, time: string) => void
 
   // logout
   logout: () => void
@@ -265,6 +271,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRestockRows(parsed.restockRows)
     setFormulaMap(parsed.formulaMap)
     setNewRestocks([])
+
+    // Restore pre-orders from Excel; keep any in-session non-pre-orders from localStorage
+    setPendingOrders((prev) => {
+      const regular   = prev.filter((o) => !o.isPreOrder)
+      const fromExcel = parsed.preOrders ?? []
+      const merged    = [...regular, ...fromExcel]
+      savePending(merged)
+      return merged
+    })
+
     setIsStoreOpen(true)
 
     const wb64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx', cellStyles: true })
@@ -449,6 +465,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         price: item.price,
         cost:  item.cost,
       }
+      if (item.temperature) base.temperature = item.temperature
+      if (item.isBundle && item.bundleItems?.length) {
+        base.isBundle    = true
+        base.bundleItems = item.bundleItems.map((bi) => ({
+          name: bi.name, size: bi.size, qty: bi.qty, price: bi.price, cost: bi.cost,
+        }))
+      }
       if (item.addOns?.length) {
         base.addOns = item.addOns.map((ao) => ({
           name:  ao.name,
@@ -597,7 +620,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           Price:     item.price,
           Revenue:   (item.price * item.qty).toFixed(2),
           NetProfit: ((item.price - item.cost) * item.qty).toFixed(2),
-          Notes:     '',
+          Notes:     item.isBundle ? 'Bundle cookie' : '',
           Customer:  order.customer,
           Method:    order.method,
           OrderNo:   order.orderNo,
@@ -632,10 +655,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deletePendingOrder = useCallback((id: string) => {
     const order = pendingOrders.find((o) => o.id === id)
-    if (order) {
-      // Restore inventory for all items in the cancelled order
+    if (order && !order.isPreOrder) {
+      // Restore inventory only for regular orders (pre-orders never deducted stock)
       const cartItems: CartItem[] = order.items.flatMap((item) => {
         const main: CartItem = { name: item.name, size: item.size, price: item.price, cost: item.cost, qty: item.qty }
+        if (item.temperature) main.temperature = item.temperature
+        if (item.isBundle && item.bundleItems?.length) {
+          main.isBundle    = true
+          main.bundleItems = item.bundleItems.map((bi) => ({
+            name: bi.name, size: bi.size, price: bi.price, cost: bi.cost, qty: bi.qty,
+          }))
+        }
         const addOnItems: CartItem[] = (item.addOns ?? []).map((ao) => ({
           name: ao.name, size: ao.size, price: ao.price, cost: ao.cost, qty: item.qty,
         }))
@@ -669,8 +699,143 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   )
 
-  const voidOrder = useCallback((orderNo: number) => {
-    const rows = dailySales.filter((r) => r.OrderNo === orderNo)
+  // ─── Bundle pre-orders (advance orders, no immediate inventory deduction) ────
+
+  const addPreOrder = useCallback(
+    (order: Omit<PendingOrder, 'id' | 'orderNo' | 'date' | 'createdAt' | 'isPreOrder'>) => {
+      const id  = Math.random().toString(36).slice(2, 9)
+      const now = new Date()
+      const full: PendingOrder = {
+        ...order,
+        id,
+        orderNo:   orderNumber,
+        date:      toISODate(now),
+        createdAt: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isPreOrder: true,
+      }
+      const next = orderNumber + 1
+      setOrderNumber(next)
+      localStorage.setItem('memento_order_number', String(next))
+      setPendingOrders((prev) => {
+        const updated = [...prev, full]
+        savePending(updated)
+        return updated
+      })
+    },
+    [orderNumber]
+  )
+
+  const completePreOrder = useCallback(
+    (id: string) => {
+      const order = pendingOrders.find((o) => o.id === id && o.isPreOrder)
+      if (!order) return
+
+      // Build CartItems from order items for inventory deduction
+      const cartItems: CartItem[] = order.items.map((item) => {
+        const base: CartItem = {
+          name: item.name, size: item.size, price: item.price, cost: item.cost, qty: item.qty,
+        }
+        if (item.isBundle && item.bundleItems?.length) {
+          base.isBundle    = true
+          base.bundleItems = item.bundleItems.map((bi) => ({
+            name: bi.name, size: bi.size, price: bi.price, cost: bi.cost, qty: bi.qty,
+          }))
+        }
+        return base
+      })
+
+      // Deduct inventory now (was not deducted at order creation)
+      const takeoutBags = order.isTakeout ? computeTakeoutBagCounts(cartItems) : undefined
+      const tempInv     = computeInventoryAfterDeduction(
+        inventory, cartItems, costing, rawIngredientsPricing, foodCosting, takeoutBags
+      )
+      const hasNegative = tempInv.some((item) => {
+        const key = 'STOCKS' in item ? 'STOCKS' : 'VOLUME' in item ? 'VOLUME' : null
+        if (!key) return false
+        return parseFloat(String(item[key as keyof typeof item])) < 0
+      })
+      if (hasNegative) {
+        alert('Insufficient stock! Cannot complete pre-order.')
+        return
+      }
+      setInventory((prev) =>
+        prev.map((item) => {
+          const updated = tempInv.find(
+            (t) => String(t.INGREDIENTS ?? '').trim().toLowerCase() === String(item.INGREDIENTS ?? '').trim().toLowerCase()
+          )
+          if (!updated) return item
+          const newStock = typeof updated.stock === 'number'
+            ? updated.stock
+            : parseFloat(String(updated.STOCKS ?? updated.VOLUME ?? 0))
+          return { ...item, stock: newStock }
+        })
+      )
+
+      // Add to daily sales — record bundle as one line, individual cookies inside
+      const newRows: SaleRow[] = order.items.flatMap((item) => {
+        if (item.isBundle) {
+          return [{
+            Date:      order.date,
+            Time:      order.createdAt,
+            Drink:     item.name,
+            Size:      item.size,
+            Qty:       item.qty,
+            Price:     item.price,
+            Revenue:   (item.price * item.qty).toFixed(2),
+            NetProfit: ((item.price - item.cost) * item.qty).toFixed(2),
+            Notes:     'Pre-order bundle',
+            Customer:  order.customer,
+            Method:    order.method,
+            OrderNo:   order.orderNo,
+            ...(order.address ? { Address: order.address } : {}),
+          } as SaleRow]
+        }
+        return [{
+          Date:      order.date,
+          Time:      order.createdAt,
+          Drink:     item.name,
+          Size:      item.size,
+          Qty:       item.qty,
+          Price:     item.price,
+          Revenue:   (item.price * item.qty).toFixed(2),
+          NetProfit: ((item.price - item.cost) * item.qty).toFixed(2),
+          Notes:     'Pre-order',
+          Customer:  order.customer,
+          Method:    order.method,
+          OrderNo:   order.orderNo,
+          ...(order.address ? { Address: order.address } : {}),
+        } as SaleRow]
+      })
+      setDailySales((prev) => [...prev, ...newRows])
+
+      setPendingOrders((prev) => {
+        const updated = prev.filter((o) => o.id !== id)
+        savePending(updated)
+        return updated
+      })
+    },
+    [pendingOrders, inventory, costing, rawIngredientsPricing, foodCosting]
+  )
+
+  const deletePreOrder = useCallback(
+    (id: string) => {
+      // No inventory to restore — pre-orders never deducted stock
+      setPendingOrders((prev) => {
+        const updated = prev.filter((o) => o.id !== id)
+        savePending(updated)
+        return updated
+      })
+    },
+    []
+  )
+
+  const voidOrder = useCallback((orderNo: number | undefined, customer: string, time: string) => {
+    const matchRow = (r: SaleRow) =>
+      r.OrderNo === orderNo &&
+      (r.Customer ?? '').trim() === customer &&
+      r.Time === time
+
+    const rows = dailySales.filter(matchRow)
     if (!rows.length) return
 
     // Reconstruct CartItems from sale rows
@@ -680,11 +845,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return base
     })
 
-    // Compute exact deduction amounts using the same logic as confirmSale
-    // (no LARGE-stock trick — direct delta accumulation, no floating-point risk)
     const deltas = computeVoidDeltas(cartItems, costing, rawIngredientsPricing, foodCosting)
 
-    // Restore stock by adding back exactly what was consumed
     setInventory((prev) =>
       prev.map((item) => {
         const key    = String(item.INGREDIENTS ?? '').trim().toLowerCase()
@@ -694,7 +856,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     )
 
-    setDailySales((prev) => prev.filter((r) => r.OrderNo !== orderNo))
+    setDailySales((prev) => prev.filter((r) => !matchRow(r)))
   }, [dailySales, costing, rawIngredientsPricing, foodCosting])
 
   // ─── Export ───────────────────────────────────────────────────────────────
@@ -703,14 +865,15 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const originalCount   = restockRows.length - newRestocks.length
       const originalRestocks = restockRows.slice(0, Math.max(0, originalCount))
-      exportHelper(wbSource, inventory, dailySales, originalRestocks, newRestocks, rawIngredientsPricing, sellingPrices)
+      const activePreOrders = pendingOrders.filter((o) => o.isPreOrder)
+      exportHelper(wbSource, inventory, dailySales, originalRestocks, newRestocks, rawIngredientsPricing, sellingPrices, activePreOrders)
       setNewRestocks([])
       localStorage.removeItem('memento_new_restocks_backup')
     } catch (err) {
       console.error('Export failed:', err)
       alert(`Export failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [wbSource, inventory, dailySales, restockRows, rawIngredientsPricing, sellingPrices])
+  }, [wbSource, inventory, dailySales, restockRows, rawIngredientsPricing, sellingPrices, pendingOrders])
 
   // ─── Logout ───────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
@@ -772,6 +935,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastReceipt, clearReceipt: () => setLastReceipt(null),
     checkoutOpen, closeCheckout, lastSaleStats, lastOrderNumber: orderNumber, resetOrderNumber,
     pendingOrders, addPendingOrder, completePendingOrder, deletePendingOrder, updatePendingOrder, voidOrder,
+    addPreOrder, completePreOrder, deletePreOrder,
     animateBars,
     exportPOSData,
     logout,

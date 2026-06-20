@@ -13,8 +13,7 @@ const DRINK_SIZE_COLS = [
 ]
 
 const COOKIE_SIZE_COLS = [
-  { label: '60g', key: 'Actual Price (60g)', costKey: 'Cost (60g)' },
-  { label: '70g', key: 'Actual Price (70g)', costKey: 'Cost (70g)' },
+  { label: '75g', key: 'Actual Price (75g)', costKey: 'Cost (75g)' },
 ]
 
 const marginColor = (pct: number) => {

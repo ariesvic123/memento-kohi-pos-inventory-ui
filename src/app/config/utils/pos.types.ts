@@ -40,10 +40,8 @@ export interface SellingPriceRow {
   'Actual Price (Slice)'?: number
   'Actual Price (Shots)'?: number
   'Actual Price (Latte Art)'?: number
-  'Actual Price (60g)'?: number
-  'Actual Price (70g)'?: number
-  'Cost (60g)'?: number
-  'Cost (70g)'?: number
+  'Actual Price (75g)'?: number
+  'Cost (75g)'?: number
   'Actual Price'?: number
   [key: string]: unknown
 }
@@ -53,11 +51,9 @@ export interface FoodCostingRow {
   Series: string
   'Master Dough (grams)': number
   'Fruit Cream gram/cookie': number | string
-  '60g QTY': number | string
-  '70g QTY': number | string
+  '75g QTY': number | string
   'Master Dough (pricing)': number
-  '60g cookie': number | string
-  '70g cookie': number | string
+  '75g cookie': number | string
   'Fruit Cream': number | string
   [key: string]: unknown
 }
@@ -72,7 +68,7 @@ export interface RawIngredientPricingRow {
   [key: string]: unknown
 }
 
-export type DrinkSize = '8oz' | '12oz' | '16oz' | 'unit' | '60g' | '70g'
+export type DrinkSize = '8oz' | '12oz' | '16oz' | 'unit' | '75g' | 'bundle'
 
 export interface CartItem {
   name: string
@@ -83,6 +79,8 @@ export interface CartItem {
   notes?: string
   temperature?: 'hot' | 'iced'
   addOns?: CartItem[]
+  isBundle?:    boolean
+  bundleItems?: CartItem[]
 }
 
 export interface SaleRow {
@@ -104,12 +102,15 @@ export interface SaleRow {
 }
 
 export interface PendingOrderItem {
-  name:    string
-  size:    DrinkSize
-  qty:     number
-  price:   number
-  cost:    number
-  addOns?: PendingOrderItem[]   // nested, preserves parent-child relationship
+  name:         string
+  size:         DrinkSize
+  qty:          number
+  price:        number
+  cost:         number
+  temperature?: 'hot' | 'iced'
+  addOns?:      PendingOrderItem[]
+  isBundle?:    boolean
+  bundleItems?: PendingOrderItem[]
 }
 
 export interface PendingOrder {
@@ -125,6 +126,7 @@ export interface PendingOrder {
   isTakeout?:   boolean
   notes?:       string
   cashReceived?: number
+  isPreOrder?:  boolean
 }
 
 export type PaymentMethod = 'CASH' | 'GCASH'

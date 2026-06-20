@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 
-import { usePOS }        from '../../../../context/POSContext'
+import { usePOS }              from '../../../../context/POSContext'
 import { CartItem, CostingRow, DrinkSize, SellingPriceRow } from '../../../../config/utils/pos.types'
-import MenuCard          from './MenuCard'
-import CartPanel         from './CartPanel'
-import NotesModal        from '../modals/NotesModal'
-import StockWarningModal from '../modals/StockWarningModal'
+import MenuCard                from './MenuCard'
+import CartPanel               from './CartPanel'
+import NotesModal              from '../modals/NotesModal'
+import StockWarningModal       from '../modals/StockWarningModal'
+import BundleSelectorModal     from '../modals/BundleSelectorModal'
 
 const CATEGORY_ORDER = ['Coffee', 'Non-Coffee', 'Food', 'Extras']
 
@@ -20,7 +21,7 @@ const resolveCategory = (item: SellingPriceRow, costing: CostingRow[]): string =
 
   // Unit-only items (Shots, Latte Art, Slice — no sized cups, no cookies) → Extras
   const hasDrinkSizes  = ['8oz', '12oz', '16oz'].some((sz) => parsePrice(item[`Actual Price (${sz})`]) > 0)
-  const hasCookieSizes = ['60g', '70g'].some((sz)          => parsePrice(item[`Actual Price (${sz})`]) > 0)
+  const hasCookieSizes = parsePrice(item['Actual Price (75g)']) > 0
   if (!hasDrinkSizes && !hasCookieSizes) return 'Extras'
 
   const drinkName = String(item.Drinks ?? '').trim().toLowerCase()
@@ -48,9 +49,10 @@ const POSTerminal: React.FC = () => {
     startCheckoutPreview,
   } = usePOS()
 
-  const [pendingItem,   setPendingItem]   = useState<CartItem | null>(null)
-  const [search,        setSearch]        = useState('')
-  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [pendingItem,    setPendingItem]    = useState<CartItem | null>(null)
+  const [search,         setSearch]         = useState('')
+  const [showShortcuts,  setShowShortcuts]  = useState(false)
+  const [showBundleModal, setShowBundleModal] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   // Keyboard shortcuts
@@ -162,6 +164,23 @@ const POSTerminal: React.FC = () => {
             </div>
           </div>
         ))}
+
+        {/* Cookie Bundle section — always visible when there are Food items */}
+        {grouped.has('Food') && (
+          <div className='pos-terminal__section pos-terminal__section--bundle'>
+            <h3 className='pos-terminal__section-title'>Bundles</h3>
+            <div className='pos-terminal__grid'>
+              <button
+                className='bundle-card'
+                onClick={() => setShowBundleModal(true)}
+              >
+                <span className='bundle-card__icon'>🍪</span>
+                <span className='bundle-card__name'>Cookie Bundle</span>
+                <span className='bundle-card__desc'>3 pcs · −₱15 · min ₱200</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <CartPanel
@@ -179,6 +198,10 @@ const POSTerminal: React.FC = () => {
         onConfirm={handleNotesConfirm}
         onClose={() => setPendingItem(null)}
       />
+
+      {showBundleModal && (
+        <BundleSelectorModal onClose={() => setShowBundleModal(false)} />
+      )}
 
       <StockWarningModal />
 

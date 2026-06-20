@@ -275,7 +275,7 @@ const DailyTally: React.FC<Props> = ({ dailySales }) => {
                                 <button
                                   className='daily-tally__void-yes'
                                   onClick={() => {
-                                    if (g.orderNo !== undefined) voidOrder(g.orderNo)
+                                    voidOrder(g.orderNo, g.customer, g.time)
                                     setPendingVoid(null)
                                   }}
                                 >

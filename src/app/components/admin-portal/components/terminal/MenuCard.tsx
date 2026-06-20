@@ -13,16 +13,16 @@ interface MenuCardProps {
 
 // Logo-derived palette: espresso → latte gold → cream
 const SIZE_BACKGROUNDS: Record<DrinkSize, string> = {
-  '8oz':  '#F5ECD6',   // foam cream (hot only)
-  '12oz': '#EDD9A8',   // latte cream
-  '16oz': '#C4921E',   // 珈琲 gold (largest size = boldest)
-  'unit': '#E8F0E4',   // fresh sage (add-ons)
-  '60g':  '#F0E8D0',   // cookie cream
-  '70g':  '#E8DCC8',   // cookie warm
+  '8oz':    '#F5ECD6',   // foam cream (hot only)
+  '12oz':   '#EDD9A8',   // latte cream
+  '16oz':   '#C4921E',   // 珈琲 gold (largest size = boldest)
+  'unit':   '#E8F0E4',   // fresh sage (add-ons)
+  '75g':    '#E8DCC8',   // cookie warm
+  'bundle': '#FFE8A0',   // bundle amber
 }
 
 const DRINK_SIZES:  DrinkSize[] = ['8oz', '12oz', '16oz']
-const COOKIE_SIZES: DrinkSize[] = ['60g', '70g']
+const COOKIE_SIZES: DrinkSize[] = ['75g']
 
 const parsePrice = (v: unknown): number => {
   const n = parseFloat(String(v ?? ''))
@@ -61,8 +61,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ drink, costing, inventory, isBestSe
   if (!hasDrinkSizes && !hasCookieSizes && !unitPrice) return null
 
   const getCost = (sz: DrinkSize): number => {
-    if (sz === '60g')  return parsePrice(drink['Cost (60g)'])
-    if (sz === '70g')  return parsePrice(drink['Cost (70g)'])
+    if (sz === '75g')  return parsePrice(drink['Cost (75g)'])
     if (sz === 'unit') {
       if (!costRow) return 0
       return (

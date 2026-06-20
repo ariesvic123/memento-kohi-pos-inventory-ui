@@ -2,35 +2,65 @@ import React, { useState, useMemo } from 'react'
 
 import { usePOS }   from '../../../../context/POSContext'
 import OrderCard    from './OrderCard'
+import PreOrderCard from './PreOrderCard'
 
 const OrdersQueue: React.FC = () => {
-  const { pendingOrders, completePendingOrder, deletePendingOrder, updatePendingOrder } = usePOS()
+  const {
+    pendingOrders,
+    completePendingOrder,
+    deletePendingOrder,
+    updatePendingOrder,
+    completePreOrder,
+    deletePreOrder,
+  } = usePOS()
+
   const [search, setSearch] = useState('')
 
+  const regularOrders = useMemo(
+    () => pendingOrders.filter((o) => !o.isPreOrder),
+    [pendingOrders]
+  )
+  const preOrders = useMemo(
+    () => pendingOrders.filter((o) => o.isPreOrder),
+    [pendingOrders]
+  )
+
   const displayed = useMemo(() => {
-    if (!search.trim()) return pendingOrders
+    if (!search.trim()) return regularOrders
     const term = search.trim().toLowerCase()
-    return pendingOrders.filter(
+    return regularOrders.filter(
       (order) =>
         order.customer.toLowerCase().includes(term) ||
         order.items.some((item) => item.name.toLowerCase().includes(term))
     )
-  }, [pendingOrders, search])
+  }, [regularOrders, search])
+
+  const displayedPreOrders = useMemo(() => {
+    if (!search.trim()) return preOrders
+    const term = search.trim().toLowerCase()
+    return preOrders.filter(
+      (order) =>
+        order.customer.toLowerCase().includes(term) ||
+        order.items.some((item) => item.name.toLowerCase().includes(term))
+    )
+  }, [preOrders, search])
+
+  const totalCount = pendingOrders.length
 
   return (
     <div className='orders-queue'>
       <div className='orders-queue__header'>
         <h1 className='orders-queue__title'>
           Orders Queue
-          {pendingOrders.length > 0 && (
-            <span className='orders-queue__badge'>{pendingOrders.length}</span>
+          {totalCount > 0 && (
+            <span className='orders-queue__badge'>{totalCount}</span>
           )}
         </h1>
         <p className='orders-queue__hint'>
           Orders appear here after each checkout. Check ✓ when ready — it moves to the Daily Tally.
         </p>
 
-        {pendingOrders.length > 0 && (
+        {totalCount > 0 && (
           <div className='orders-queue__search-wrap'>
             <span className='orders-queue__search-icon'><svg width='13' height='13' viewBox='0 0 13 13' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'><circle cx='5.5' cy='5.5' r='4'/><path d='M9 9l2.5 2.5'/></svg></span>
             <input
@@ -47,29 +77,70 @@ const OrdersQueue: React.FC = () => {
         )}
       </div>
 
-      {pendingOrders.length === 0 ? (
+      {/* Pre-Orders section */}
+      {preOrders.length > 0 && (
+        <div className='orders-queue__section'>
+          <div className='orders-queue__section-header'>
+            <span className='orders-queue__section-title'>Pre-Orders</span>
+            <span className='orders-queue__section-badge orders-queue__section-badge--preorder'>
+              {preOrders.length}
+            </span>
+            <span className='orders-queue__section-hint'>Advance bundle orders — check ✓ to deduct stock &amp; move to tally</span>
+          </div>
+          {displayedPreOrders.length > 0 ? (
+            <div className='orders-queue__grid'>
+              {displayedPreOrders.map((order, i) => (
+                <PreOrderCard
+                  key={order.id}
+                  order={order}
+                  index={i}
+                  onDone={completePreOrder}
+                  onDelete={deletePreOrder}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className='orders-queue__section-empty'>No pre-orders match "{search}".</p>
+          )}
+        </div>
+      )}
+
+      {/* Regular orders section */}
+      {regularOrders.length > 0 && (
+        <div className='orders-queue__section'>
+          {preOrders.length > 0 && (
+            <div className='orders-queue__section-header'>
+              <span className='orders-queue__section-title'>Regular Orders</span>
+              <span className='orders-queue__section-badge'>{regularOrders.length}</span>
+            </div>
+          )}
+          {displayed.length === 0 && search ? (
+            <div className='orders-queue__empty'>
+              <div className='orders-queue__empty-icon'><svg width='28' height='28' viewBox='0 0 28 28' fill='none' stroke='currentColor' strokeWidth='1.4' strokeLinecap='round'><circle cx='12' cy='12' r='8'/><path d='M18 18l5.5 5.5'/></svg></div>
+              <p>No orders match "{search}".</p>
+            </div>
+          ) : (
+            <div className='orders-queue__grid'>
+              {displayed.map((order, i) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  index={i}
+                  onDone={completePendingOrder}
+                  onDelete={deletePendingOrder}
+                  onUpdate={updatePendingOrder}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {totalCount === 0 && (
         <div className='orders-queue__empty'>
           <div className='orders-queue__empty-icon'><svg width='32' height='32' viewBox='0 0 32 32' fill='none' stroke='currentColor' strokeWidth='1.4' strokeLinecap='round' strokeLinejoin='round'><rect x='6' y='3' width='20' height='26' rx='2'/><path d='M11 11h10M11 16h10M11 21h6'/></svg></div>
           <p>No pending orders.</p>
           <p>Complete a sale from the Terminal to see orders here.</p>
-        </div>
-      ) : displayed.length === 0 ? (
-        <div className='orders-queue__empty'>
-          <div className='orders-queue__empty-icon'><svg width='28' height='28' viewBox='0 0 28 28' fill='none' stroke='currentColor' strokeWidth='1.4' strokeLinecap='round'><circle cx='12' cy='12' r='8'/><path d='M18 18l5.5 5.5'/></svg></div>
-          <p>No orders match "{search}".</p>
-        </div>
-      ) : (
-        <div className='orders-queue__grid'>
-          {displayed.map((order, i) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              index={i}
-              onDone={completePendingOrder}
-              onDelete={deletePendingOrder}
-              onUpdate={updatePendingOrder}
-            />
-          ))}
         </div>
       )}
     </div>

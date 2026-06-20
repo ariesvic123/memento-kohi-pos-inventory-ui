@@ -34,10 +34,13 @@ const CartPanel: React.FC<CartPanelProps> = ({
 
       <div className='cart-panel__scroll'>
         {cart.map((item, i) => (
-          <div key={`${item.name}-${item.size}-${i}`} className='cart-panel__item'>
+          <div key={`${item.name}-${item.size}-${i}`} className={`cart-panel__item${item.isBundle ? ' cart-panel__item--bundle' : ''}`}>
             <div className='cart-panel__item-header'>
               <div>
-                <b>{item.name}</b>
+                <b>{item.isBundle ? 'Cookie Bundle' : item.name}</b>
+                {item.isBundle && (
+                  <span className='cart-panel__bundle-tag'>BUNDLE</span>
+                )}
                 {item.temperature && (
                   <span className={`cart-panel__temp-tag cart-panel__temp-tag--${item.temperature}`}>
                     {item.temperature === 'hot' ? 'Hot' : 'Iced'}
@@ -50,9 +53,23 @@ const CartPanel: React.FC<CartPanelProps> = ({
 
             <div className='cart-panel__qty-row'>
               <button className='cart-panel__qty-btn' onClick={() => onDecrement(i)}>−</button>
-              <span>{item.qty} × {item.size}</span>
+              <span>{item.qty} × {item.isBundle ? '3 pcs' : item.size}</span>
               <button className='cart-panel__qty-btn' onClick={() => onIncrement(i)}>+</button>
             </div>
+
+            {/* Bundle constituent cookies */}
+            {item.isBundle && (item.bundleItems ?? []).length > 0 && (
+              <div className='cart-panel__bundle-items'>
+                {(item.bundleItems ?? []).map((bi, j) => (
+                  <div key={j} className='cart-panel__bundle-cookie'>
+                    <span className='cart-panel__bundle-tree'>└</span>
+                    <span className='cart-panel__bundle-cookie-name'>{bi.name}</span>
+                    <span className='cart-panel__bundle-cookie-size'>{bi.size}</span>
+                    <span className='cart-panel__bundle-cookie-price'>₱{bi.price}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Subtotal always on right */}
             <div className='cart-panel__price-meta'>
