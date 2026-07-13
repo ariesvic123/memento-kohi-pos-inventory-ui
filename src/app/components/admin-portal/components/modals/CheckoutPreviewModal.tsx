@@ -47,10 +47,7 @@ const CheckoutPreviewModal: React.FC = () => {
   }, [exactCash, totalDue])
 
   useEffect(() => {
-    if (isPreviewing) {
-      // Always reset customer name so every order starts fresh
-      setCustomerInfo((prev) => ({ ...prev, name: '' }))
-    } else {
+    if (!isPreviewing) {
       setCashReceived('')
       setExactCash(false)
       setAttempted(false)

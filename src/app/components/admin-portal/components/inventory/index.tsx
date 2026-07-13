@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 
 import { usePOS }      from '../../../../context/POSContext'
 import { resolveUnit } from '../../../../config/utils/pos.types'
@@ -30,6 +30,20 @@ const Inventory: React.FC = () => {
   }, [dailySales])
   const [filter, setFilter] = useState<FilterMode>('all')
   const [search, setSearch] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      if (e.key === '/' && !inInput) { e.preventDefault(); searchRef.current?.focus() }
+      if (e.key === 'Escape' && document.activeElement === searchRef.current) {
+        setSearch(''); searchRef.current?.blur()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const displayed = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -75,8 +89,9 @@ const Inventory: React.FC = () => {
             <span className='inventory__search-icon'><svg width='13' height='13' viewBox='0 0 13 13' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'><circle cx='5.5' cy='5.5' r='4'/><path d='M9 9l2.5 2.5'/></svg></span>
             <input
               type='text'
+              ref={searchRef}
               className='inventory__search'
-              placeholder='Search item…'
+              placeholder='Search item… ( / )'
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

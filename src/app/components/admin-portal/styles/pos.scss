@@ -1985,18 +1985,18 @@
   transform: rotate(var(--tilt, -1deg));
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.38s ease;
   animation: sticky-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-  overflow: hidden;
 
   &:hover { transform: rotate(0deg) translateY(-4px); box-shadow: 4px 12px 22px rgba(0,0,0,0.22); }
   &--checked { opacity: 0.55; }
   &--exiting { transform: translateY(-28px) scale(0.86) rotate(var(--tilt,-1deg)); opacity: 0; pointer-events: none; }
 
   &__tape {
-    position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
-    width: 48px; height: 16px; background: rgba(200,220,255,0.55); border-radius: 3px;
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 48px; height: 18px; background: rgba(200,220,255,0.55); border-radius: 3px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    z-index: 0;
   }
-  &__header   { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  &__header   { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; position: relative; z-index: 1; }
   &__order-no { font-weight: 800; font-size: 0.82rem; color: #5c3a21; background: rgba(92,58,33,0.1); padding: 1px 8px; border-radius: 8px; }
   &__time     { font-size: 0.7rem; color: #a08060; margin-left: auto; }
 
@@ -2043,15 +2043,23 @@
   &__delete {
     position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer;
     font-size: 0.68rem; color: #c0a880; padding: 2px 5px; border-radius: 4px;
-    opacity: 0; transition: opacity 0.15s;
+    opacity: 0; transition: opacity 0.15s; z-index: 2;
     .sticky-card:hover & { opacity: 1; }
     &:hover { color: #c0392b; background: rgba(192,57,43,0.08); }
+  }
+
+  &__slip-btn {
+    display: block; width: 100%; margin-top: 8px;
+    background: none; border: 1px dashed #c0a880; border-radius: 6px;
+    color: #7B3E18; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+    padding: 5px 0; cursor: pointer; text-transform: uppercase; transition: all 0.15s;
+    &:hover { background: rgba(92,58,33,0.07); border-color: #7B3E18; color: #3D1E0A; }
   }
 
   &__edit-btn {
     position: absolute; top: 8px; left: 8px; background: none; border: none; cursor: pointer;
     font-size: 0.78rem; color: #c0a880; padding: 2px 5px; border-radius: 4px;
-    opacity: 0; transition: opacity 0.15s;
+    opacity: 0; transition: opacity 0.15s; z-index: 2;
     .sticky-card:hover & { opacity: 1; }
     &:hover { color: #1565c0; background: rgba(21,101,192,0.1); }
   }
@@ -2128,6 +2136,7 @@
   }
   &__done-overlay {
     position: absolute; inset: 0; background: rgba(255,253,231,0.9);
+    border-radius: inherit;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
     animation: fade-in 0.18s ease;
   }
@@ -2541,6 +2550,134 @@
   &__customer-name { font-weight: 700; display: block; }
   &__address-tag   { font-size: 0.72rem; color: #7B3E18; display: block; margin-top: 2px; }
   &__row--addon td { background: #faf7f2; }
+
+  &__date-select--datepicker {
+    appearance: auto;
+    background-image: none;
+    padding-right: 12px;
+  }
+
+  &__notes-wrap {
+    margin: 12px 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  // Collapsed button — ghost when empty, amber chip when has note
+  &__notes-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px 7px 12px;
+    border-radius: 10px;
+    border: 1.5px dashed #d9ccc5;
+    background: transparent;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #b89070;
+    cursor: pointer;
+    align-self: flex-start;
+    max-width: 100%;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    &:hover { border-color: #a87848; color: #7B3E18; background: #fdf5ee; }
+    &--has-note {
+      border-style: solid;
+      border-color: #c9a87a;
+      background: #faf3e8;
+      color: #5c3a21;
+      &:hover { border-color: #a87848; background: #f5ece0; }
+    }
+  }
+  &__notes-preview {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+    font-weight: 400;
+    color: #7a5a3a;
+    font-size: 0.78rem;
+  }
+  &__notes-chevron { margin-left: auto; flex-shrink: 0; color: #b89070; }
+
+  // Expanded panel
+  &__notes-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #faf3e8;
+    border: 1.5px solid #c9a87a;
+    border-radius: 12px;
+    padding: 12px 14px 10px;
+  }
+  &__notes-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #A87848;
+  }
+  &__notes-textarea {
+    width: 100%;
+    min-height: 72px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #ddd0c0;
+    background: #fff;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: #2d1b18;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+    &::placeholder { color: #c0a990; }
+    &:focus { outline: none; border-color: #a87848; }
+  }
+  &__notes-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  &__notes-save {
+    padding: 7px 18px;
+    border-radius: 8px;
+    border: none;
+    background: #3D1E0A;
+    color: #FAF6EE;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    &:hover { opacity: 0.82; }
+  }
+  &__notes-cancel {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #cbb898;
+    background: transparent;
+    color: #8a6040;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    &:hover { border-color: #a87848; color: #5c3a21; }
+  }
+  &__notes-clear {
+    margin-left: auto;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #c08060;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    &:hover { color: #8b2020; text-decoration: underline; }
+  }
 }
 
 // ─── Orders queue: search ─────────────────────────────────────────────────────
@@ -3574,6 +3711,13 @@ kbd {
     text-transform: uppercase;
     color: #3D1E0A;
   }
+
+  &__meta {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 6px;
+  }
+  &__meta-no       { font-size: 0.68rem; font-weight: 700; color: #A87848; }
+  &__meta-customer { font-size: 0.78rem; font-weight: 700; color: #2d1b18; }
 
   &__tear {
     border: none;

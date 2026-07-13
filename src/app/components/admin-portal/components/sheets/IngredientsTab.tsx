@@ -107,6 +107,20 @@ const IngredientsTab: React.FC<IngredientsTabProps> = ({ onDirtyChange }) => {
   const [dtFilter,   setDtFilter]   = useState<Set<string>>(new Set())
   const [ingSearch,  setIngSearch]  = useState('')
   const [page,       setPage]       = useState(1)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      if (e.key === '/' && !inInput) { e.preventDefault(); searchRef.current?.focus() }
+      if (e.key === 'Escape' && document.activeElement === searchRef.current) {
+        setIngSearch(''); searchRef.current?.blur()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
   const [drafts,    setDrafts]    = useState<VolDraft[]>([])
   const [saved,     setSaved]     = useState(false)
   const [isDirty,   setIsDirty]   = useState(false)
@@ -219,9 +233,10 @@ const IngredientsTab: React.FC<IngredientsTabProps> = ({ onDirtyChange }) => {
             </svg>
           </span>
           <input
+            ref={searchRef}
             type='text'
             className='sheets-tab__search'
-            placeholder='Search ingredient…'
+            placeholder='Search ingredient… ( / )'
             value={ingSearch}
             onChange={(e) => setIngSearch(e.target.value)}
           />

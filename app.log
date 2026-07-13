@@ -1,0 +1,61 @@
+
+> memento-kohi-pos-inventory-react@1.0.0 dev
+> npm-run-all -s build start
+
+
+> memento-kohi-pos-inventory-react@1.0.0 build
+> webpack --config webpack.config.js
+
+assets by status 591 KiB [1m[32m[cached][39m[22m 2 assets
+assets by status 5.19 MiB [1m[33m[compared for emit][39m[22m
+  asset [1m[32mindex-chunk.bundle.js[39m[22m 5.19 MiB [1m[33m[compared for emit][39m[22m (name: index)
+  asset [1m[32m./index.html[39m[22m 357 bytes [1m[33m[compared for emit][39m[22m
+orphan modules 366 KiB [1m[33m[orphan][39m[22m 144 modules
+runtime modules 4.12 KiB 11 modules
+modules by path [1m./node_modules/[39m[22m 3.93 MiB 468 modules
+modules by path [1m./src/app/[39m[22m 448 KiB (javascript) 591 KiB (asset)
+  modules by path [1m./src/app/components/[39m[22m 314 KiB 36 modules
+  modules by path [1m./src/app/assets/[39m[22m 2.25 KiB (javascript) 591 KiB (asset) 4 modules
+  modules by path [1m./src/app/config/[39m[22m 96.4 KiB
+    modules by path [1m./src/app/config/routes/[39m[22m 1.49 KiB 2 modules
+    modules by path [1m./src/app/config/utils/*.ts[39m[22m 94.9 KiB 2 modules
+  modules by path [1m./src/app/*.tsx[39m[22m 895 bytes
+    [1m./src/app/index.tsx[39m[22m 349 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+    [1m./src/app/App.tsx[39m[22m 546 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1m./src/app/context/POSContext.tsx[39m[22m 33.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1m./src/app/hocs/error_page.tsx[39m[22m 468 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1mdata:image/svg+xml,%3Csvg xmlns=%27..[39m[22m 181 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+webpack 5.107.1 compiled [1m[32msuccessfully[39m[22m in 5209 ms
+
+> memento-kohi-pos-inventory-react@1.0.0 start
+> webpack server --open
+
+<i> [webpack-dev-server] SSL certificate: C:\Users\DELL\Documents\Memento Kohi\memento-kohi-post-inventory-react\node_modules\.cache\webpack-dev-server\server.pem
+<i> [webpack-dev-server] Project is running at:
+<i> [webpack-dev-server] Loopback: [36mhttps://localhost:8080/[39m, [36mhttps://[::1]:8080/[39m
+<i> [webpack-dev-server] On Your Network (IPv4): [36mhttps://192.168.1.8:8080/[39m
+<i> [webpack-dev-server] Content not from webpack is served from '[36mC:\Users\DELL\Documents\Memento Kohi\memento-kohi-post-inventory-react\public[39m' directory
+<i> [webpack-dev-server] 404s will fallback to '[36m/index.html[39m'
+<i> [webpack-dev-middleware] wait until bundle finished: /
+assets by path [1m[32m*.png[39m[22m 591 KiB
+  asset [1m[32me7bc5888971cd35cd6dc.png[39m[22m 530 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: src/app/assets/images/png/09474929000.png] (auxiliary name: index)
+  asset [1m[32m692e3ac170cb5b463fc2.png[39m[22m 61.1 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: src/app/assets/logo.png] (auxiliary name: index)
+asset [1m[32mindex-chunk.bundle.js[39m[22m 5.37 MiB [1m[32m[emitted][39m[22m (name: index)
+asset [1m[32m./index.html[39m[22m 357 bytes [1m[32m[emitted][39m[22m
+orphan modules 366 KiB [1m[33m[orphan][39m[22m 144 modules
+runtime modules 29.6 KiB 16 modules
+modules by path [1m./node_modules/[39m[22m 4.04 MiB 482 modules
+modules by path [1m./src/app/[39m[22m 451 KiB (javascript) 591 KiB (asset)
+  modules by path [1m./src/app/components/[39m[22m 317 KiB 36 modules
+  modules by path [1m./src/app/assets/[39m[22m 3.43 KiB (javascript) 591 KiB (asset) 4 modules
+  modules by path [1m./src/app/config/[39m[22m 96.4 KiB
+    modules by path [1m./src/app/config/routes/[39m[22m 1.49 KiB 2 modules
+    modules by path [1m./src/app/config/utils/*.ts[39m[22m 94.9 KiB 2 modules
+  modules by path [1m./src/app/*.tsx[39m[22m 895 bytes
+    [1m./src/app/index.tsx[39m[22m 349 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+    [1m./src/app/App.tsx[39m[22m 546 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1m./src/app/context/POSContext.tsx[39m[22m 33.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1m./src/app/hocs/error_page.tsx[39m[22m 468 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1mdata:image/svg+xml,%3Csvg xmlns=%27..[39m[22m 181 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+webpack 5.107.1 compiled [1m[32msuccessfully[39m[22m in 9121 ms
+^C^C

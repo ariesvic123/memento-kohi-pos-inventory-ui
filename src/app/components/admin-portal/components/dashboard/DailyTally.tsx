@@ -59,24 +59,35 @@ const DailyTally: React.FC<Props> = ({ dailySales }) => {
   const { voidOrder } = usePOS()
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
 
-  const availableDates = useMemo(() => {
-    // Normalise any leftover serial-number dates before building the date list
-    const set = new Set(dailySales.map((r) => normDate(r.Date)).filter(Boolean))
-    if (set.size && !set.has(today)) set.add(today)
-    else if (!set.size) set.add(today)
-    return [...set].sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-  }, [dailySales, today])
-
   const [selectedDate, setSelectedDate] = useState(today)
   const [page,         setPage]         = useState(1)
   const [pendingVoid,  setPendingVoid]  = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!availableDates.includes(selectedDate)) setSelectedDate(availableDates[0] ?? today)
-  }, [availableDates])
+  const [notes,        setNotes]        = useState('')
+  const [draftNotes,   setDraftNotes]   = useState('')
+  const [notesOpen,    setNotesOpen]    = useState(false)
+  const [noteSaved,    setNoteSaved]    = useState(false)
 
   // Reset page when date changes
   useEffect(() => { setPage(1) }, [selectedDate])
+
+  // Load saved note and close panel when date changes
+  useEffect(() => {
+    const stored = localStorage.getItem('memento_daily_notes')
+    const all = stored ? (JSON.parse(stored) as Record<string, string>) : {}
+    setNotes(all[selectedDate] ?? '')
+    setNotesOpen(false)
+  }, [selectedDate])
+
+  const handleSaveNote = () => {
+    const stored = localStorage.getItem('memento_daily_notes')
+    const all = stored ? (JSON.parse(stored) as Record<string, string>) : {}
+    if (draftNotes) all[selectedDate] = draftNotes
+    else delete all[selectedDate]
+    localStorage.setItem('memento_daily_notes', JSON.stringify(all))
+    setNotes(draftNotes)
+    setNoteSaved(true)
+    setTimeout(() => setNoteSaved(false), 2000)
+  }
 
   const groups = useMemo<CustomerGroup[]>(() => {
     // Normalise dates first so serial-number dates match the selected ISO date
@@ -151,17 +162,12 @@ const DailyTally: React.FC<Props> = ({ dailySales }) => {
         <span className='daily-tally__title'>Daily Sales Record</span>
 
         <div className='daily-tally__filter'>
-          <select
-            className='daily-tally__date-select'
+          <input
+            type='date'
+            className='daily-tally__date-select daily-tally__date-select--datepicker'
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-          >
-            {availableDates.map((d) => (
-              <option key={d} value={d}>
-                {d === today ? `Today — ${formatDateLabel(d)}` : formatDateLabel(d)}
-              </option>
-            ))}
-          </select>
+          />
 
           {!isToday && (
             <button className='daily-tally__today-btn' onClick={() => setSelectedDate(today)}>
@@ -200,6 +206,61 @@ const DailyTally: React.FC<Props> = ({ dailySales }) => {
             {gcashTotal > 0 && <span className='daily-tally__method-chip daily-tally__method-chip--gcash'>GCash ₱{gcashTotal.toFixed(2)}</span>}
           </div>
         </div>
+      </div>
+
+      {/* ── Daily Notes toggle ── */}
+      <div className='daily-tally__notes-wrap'>
+        {!notesOpen ? (
+          <button
+            className={`daily-tally__notes-btn${notes ? ' daily-tally__notes-btn--has-note' : ''}`}
+            onClick={() => { setDraftNotes(notes); setNotesOpen(true) }}
+            title={notes ? 'Edit day note' : 'Add a note for this day'}
+          >
+            <svg width='13' height='13' viewBox='0 0 14 14' fill='none' stroke='currentColor' strokeWidth='1.7' strokeLinecap='round' strokeLinejoin='round'>
+              <path d='M9.5 1.5l3 3-8 8H1.5v-3l8-8z'/>
+            </svg>
+            {notes
+              ? <span className='daily-tally__notes-preview'>{notes.split('\n')[0].slice(0, 60)}{notes.length > 60 ? '…' : ''}</span>
+              : <span>Add Note</span>
+            }
+            <svg className='daily-tally__notes-chevron' width='10' height='6' viewBox='0 0 10 6' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'>
+              <path d='M1 1l4 4 4-4'/>
+            </svg>
+          </button>
+        ) : (
+          <div className='daily-tally__notes-panel'>
+            <div className='daily-tally__notes-panel-header'>
+              <svg width='13' height='13' viewBox='0 0 14 14' fill='none' stroke='currentColor' strokeWidth='1.7' strokeLinecap='round' strokeLinejoin='round'>
+                <path d='M9.5 1.5l3 3-8 8H1.5v-3l8-8z'/>
+              </svg>
+              <span>Day Note</span>
+            </div>
+            <textarea
+              className='daily-tally__notes-textarea'
+              placeholder='e.g. Rainy day — low foot traffic. Ran out of oat milk by noon.'
+              value={draftNotes}
+              onChange={(e) => setDraftNotes(e.target.value)}
+              autoFocus
+            />
+            <div className='daily-tally__notes-actions'>
+              <button className='daily-tally__notes-save' onClick={handleSaveNote}>
+                {noteSaved ? '✓ Saved' : 'Save Note'}
+              </button>
+              <button className='daily-tally__notes-cancel' onClick={() => setNotesOpen(false)}>
+                Cancel
+              </button>
+              {notes && !noteSaved && (
+                <button
+                  className='daily-tally__notes-clear'
+                  onClick={() => { setDraftNotes(''); }}
+                  title='Clear note'
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Table ── */}

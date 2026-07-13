@@ -4,11 +4,13 @@ import html2canvas from 'html2canvas'
 import { CartItem } from '../../../../config/utils/pos.types'
 
 interface Props {
-  cart:    CartItem[]
-  onClose: () => void
+  cart:      CartItem[]
+  onClose:   () => void
+  customer?: string
+  orderNo?:  number
 }
 
-const CartSlipModal: React.FC<Props> = ({ cart, onClose }) => {
+const CartSlipModal: React.FC<Props> = ({ cart, onClose, customer, orderNo }) => {
   const slipRef          = useRef<HTMLDivElement>(null)
   const [copying, setCopying] = useState(false)
   const [done,    setDone]    = useState(false)
@@ -72,6 +74,12 @@ const CartSlipModal: React.FC<Props> = ({ cart, onClose }) => {
         <div className='cart-slip' ref={slipRef}>
 
           <div className='cart-slip__header'>Order Slip</div>
+          {(customer || orderNo !== undefined) && (
+            <div className='cart-slip__meta'>
+              {orderNo !== undefined && <span className='cart-slip__meta-no'>#{orderNo}</span>}
+              {customer && <span className='cart-slip__meta-customer'>{customer}</span>}
+            </div>
+          )}
           <div className='cart-slip__tear' />
 
           <div className='cart-slip__items'>
@@ -106,9 +114,18 @@ const CartSlipModal: React.FC<Props> = ({ cart, onClose }) => {
                     }
                   </div>
 
+                  {/* Bundle items */}
+                  {(item.bundleItems ?? []).map((bi, j) => (
+                    <div key={`bi-${j}`} className='cart-slip__addon'>
+                      <span className='cart-slip__addon-tree'>└</span>
+                      <span className='cart-slip__addon-name'>{bi.name} ({bi.size})</span>
+                      <span className='cart-slip__addon-price'>₱{bi.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+
                   {/* Add-ons */}
                   {(item.addOns ?? []).map((ao, j) => (
-                    <div key={j} className='cart-slip__addon'>
+                    <div key={`ao-${j}`} className='cart-slip__addon'>
                       <span className='cart-slip__addon-tree'>└</span>
                       <span className='cart-slip__addon-name'>+ {ao.name}</span>
                       <span className='cart-slip__addon-price'>
